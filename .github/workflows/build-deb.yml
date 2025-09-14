@@ -137,7 +137,7 @@ jobs:
         ls -la *.deb || echo "No .deb files found in current directory"
         
         # The package should be named with the clean version
-        EXPECTED_DEB="openlist_${CLEAN_VERSION}-1_${ARCH}.deb"
+        EXPECTED_DEB="openlist_${VERSION}-1_${ARCH}.deb"
         if [ -f "$EXPECTED_DEB" ]; then
           echo "Successfully built: $EXPECTED_DEB"
         elif [ -f "../$EXPECTED_DEB" ]; then
