@@ -147,7 +147,7 @@ echo "Dpkg Architecture: $DPKG_ARCH"
 echo "=== Checking for required tools ==="
 MISSING_TOOLS=()
 
-for tool in wget tar dpkg-buildpackage debhelper; do
+for tool in wget tar dpkg-buildpackage dh; do
     if ! command -v $tool &> /dev/null; then
         MISSING_TOOLS+=("$tool")
     fi
