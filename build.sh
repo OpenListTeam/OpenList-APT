@@ -20,7 +20,6 @@ declare -A ARCH_MAP=(
     ["ppc64el"]="ppc64le"
     ["riscv64"]="riscv64"
     ["s390x"]="s390x"
-    ["loongarch64"]="loong64-abi1.0"
     ["loong64"]="loong64"
 )
 
