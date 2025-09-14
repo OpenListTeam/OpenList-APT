@@ -4,9 +4,25 @@ set -e
 
 # Default values
 VERSION=""
-ARCH="amd64"
+DPKG_ARCH="amd64"
 USE_LATEST=true
 DEBUG=false
+# Architecture map for dpkg 
+# "Arch in dpkg" -> "Arch in openlist"
+# See: https://wiki.debian.org/SupportedArchitectures and https://www.debian.org/ports/
+# Note: armel will be removed in Debian 14
+declare -A ARCH_MAP=(
+    ["amd64"]="amd64"
+    ["i386"]="386"
+    ["arm64"]="arm64"
+    ["armel"]="arm-5"
+    ["armhf"]="arm-7"
+    ["ppc64el"]="ppc64le"
+    ["riscv64"]="riscv64"
+    ["s390x"]="s390x"
+    ["loongarch64"]="loong64-abi1.0"
+    ["loong64"]="loong64"
+)
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -17,7 +33,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -a|--arch)
-            ARCH="$2"
+            DPKG_ARCH="$2"
             shift 2
             ;;
         -d|--debug)
@@ -28,7 +44,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo "Options:"
             echo "  -v, --version VERSION    Set package version (default: fetch latest from GitHub)"
-            echo "  -a, --arch ARCH         Set architecture (amd64 or arm64, default: amd64)"
+            echo "  -a, --arch ARCH         Set architecture (as supported in Debian, default: amd64)"
             echo "  -d, --debug             Enable debug output"
             echo "  -h, --help              Show this help message"
             exit 0
@@ -46,8 +62,10 @@ if [ "$DEBUG" = "true" ]; then
 fi
 
 # Validate architecture
-if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
-    echo "Error: Architecture must be either 'amd64' or 'arm64'"
+ARCH=${ARCH_MAP["$DPKG_ARCH"]}
+if [ -z "$ARCH" ]; then 
+    echo "Error: Invalid architecture: $DPKG_ARCH"
+    echo "Supported architectures: ${!ARCH_MAP[@]}"
     exit 1
 fi
 
@@ -123,6 +141,7 @@ fi
 echo "Building OpenList DEB package..."
 echo "Version: $CLEAN_VERSION"
 echo "Architecture: $ARCH"
+echo "Dpkg Architecture: $DPKG_ARCH"
 
 # Check for required tools
 echo "=== Checking for required tools ==="
@@ -139,15 +158,6 @@ if [ ${#MISSING_TOOLS[@]} -ne 0 ]; then
     echo "Please install them:"
     echo "sudo apt-get install wget tar debhelper devscripts build-essential"
     exit 1
-fi
-
-# Install cross-compilation tools for ARM64 if needed and not already installed
-if [[ "$ARCH" == "arm64" ]]; then
-    if ! command -v aarch64-linux-gnu-gcc &> /dev/null; then
-        echo "Installing cross-compilation tools for ARM64..."
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-    fi
 fi
 
 # Download binary
@@ -210,9 +220,8 @@ chmod +x debian/postrm
 export DEB_HOST_ARCH=$ARCH
 export DEB_BUILD_OPTIONS="nocheck"
 
-# Set cross-compilation environment for ARM64
-if [ "$ARCH" = "arm64" ]; then
-    export CC=aarch64-linux-gnu-gcc
+# Set cross-compilation environment for non-native arch
+if [ "$ARCH" != "$(dpkg --print-architecture)" ]; then
     export DEB_BUILD_PROFILES="cross"
 fi
 
@@ -220,7 +229,6 @@ echo "=== Building package ==="
 echo "Building package with:"
 echo "DEB_HOST_ARCH=$DEB_HOST_ARCH"
 echo "DEB_BUILD_OPTIONS=$DEB_BUILD_OPTIONS"
-echo "CC=$CC"
 echo "DEB_BUILD_PROFILES=$DEB_BUILD_PROFILES"
 echo "Package version: $CLEAN_VERSION-1"
 
