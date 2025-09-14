@@ -201,7 +201,7 @@ cat > debian/changelog << EOF
 openlist ($CLEAN_VERSION-1) unstable; urgency=medium
 
   * DEB package built from OpenListTeam/OpenList $TAG_NAME
-  * Automated build for $ARCH architecture
+  * Automated build for $DPKG_ARCH architecture
   * Binary downloaded from official release
 
  -- OpenListTeam <openlistteam@gmail.com>  $(date -R)
@@ -221,7 +221,7 @@ export DEB_HOST_ARCH=$ARCH
 export DEB_BUILD_OPTIONS="nocheck"
 
 # Set cross-compilation environment for non-native arch
-if [ "$ARCH" != "$(dpkg --print-architecture)" ]; then
+if [ "$DPKG_ARCH" != "$(dpkg --print-architecture)" ]; then
     export DEB_BUILD_PROFILES="cross"
 fi
 
@@ -235,16 +235,16 @@ echo "Package version: $CLEAN_VERSION-1"
 # Build the package
 echo "Starting dpkg-buildpackage..."
 if [ "$DEBUG" = "true" ]; then
-    dpkg-buildpackage -b -us -uc -a$ARCH
+    dpkg-buildpackage -b -us -uc -a$DPKG_ARCH
 else
-    dpkg-buildpackage -b -us -uc -a$ARCH 2>&1 | tee build.log
+    dpkg-buildpackage -b -us -uc -a$DPKG_ARCH 2>&1 | tee build.log
 fi
 
 # Cleanup
 rm -f "openlist-linux-$ARCH.tar.gz"
 
 # Check for generated package
-EXPECTED_DEB="openlist_${CLEAN_VERSION}-1_${ARCH}.deb"
+EXPECTED_DEB="openlist_${CLEAN_VERSION}-1_${DPKG_ARCH}.deb"
 if [ -f "$EXPECTED_DEB" ]; then
     echo "=== Build completed successfully! ==="
     echo "Package file: $EXPECTED_DEB"
