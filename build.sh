@@ -216,7 +216,7 @@ chmod +x debian/prerm
 chmod +x debian/postrm
 
 # Set environment variables for cross-compilation
-export DEB_HOST_ARCH=$ARCH
+export DEB_HOST_ARCH=$DPKG_ARCH
 export DEB_BUILD_OPTIONS="nocheck"
 
 # Set cross-compilation environment for non-native arch
