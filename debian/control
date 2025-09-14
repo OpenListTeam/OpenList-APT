@@ -2,7 +2,7 @@ Source: openlist
 Section: utils
 Priority: optional
 Maintainer: OpenListTeam <openlistteam@gmail.com>
-Build-Depends: debhelper (>= 10), wget, curl, tar, jq
+Build-Depends: debhelper (>= 10), wget, tar
 Standards-Version: 4.1.2
 Homepage: https://github.com/OpenListTeam/OpenList
 Vcs-Git: https://github.com/OpenListTeam/OpenList.git
