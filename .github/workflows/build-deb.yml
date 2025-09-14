@@ -9,7 +9,7 @@ on:
       force_build:
         description: 'Force build even if no new version'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       ppa_build_number:
         description: 'Custom PPA build number (e.g., 2 for 4.0.8-2ubuntu1~22.04.1)'
