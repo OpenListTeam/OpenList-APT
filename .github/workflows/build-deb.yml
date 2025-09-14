@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: ['amd64', 'i386', 'arm64', 'armel', 'armhf', 'ppc64el', 'riscv64', 's390x', 'loong64']
     
     steps:
     - name: Checkout code
@@ -123,103 +123,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y debhelper devscripts build-essential wget jq
         
-        # Install cross-compilation tools for ARM64 if needed
-        if [ "${{ matrix.arch }}" = "arm64" ]; then
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-        fi
-        
     - name: Prepare and build DEB package
       run: |
         VERSION="${{ needs.check-version.outputs.version }}"
-        TAG_NAME="${{ needs.check-version.outputs.tag_name }}"
         ARCH="${{ matrix.arch }}"
         
-        # Validate inputs
-        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-          echo "Error: VERSION is null or empty"
-          exit 1
-        fi
-        
-        if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "null" ]; then
-          echo "Error: TAG_NAME is null or empty"
-          exit 1
-        fi
-        
-        # Ensure version is clean (no 'v' prefix) for debian package
-        CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
-        
-        echo "=== Version Information ==="
-        echo "Original TAG_NAME: $TAG_NAME"
-        echo "Extracted VERSION: $VERSION"
-        echo "Clean VERSION for debian: $CLEAN_VERSION"
-        echo "Architecture: $ARCH"
-        
-        # Validate clean version
-        if [[ ! "$CLEAN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
-          echo "Error: Clean version format is invalid: $CLEAN_VERSION"
-          exit 1
-        fi
-        
-        echo "=== Preparing debian package ==="
-        
-        # Update changelog with clean version (no 'v' prefix)
-        cat > debian/changelog << EOF
-        openlist ($CLEAN_VERSION-1) unstable; urgency=medium
-
-          * DEB package built from OpenListTeam/OpenList $TAG_NAME
-          * Automated build for $ARCH architecture
-          * Binary downloaded from official release
-
-         -- OpenList Team <openlistteam@gmail.com>  $(date -R)
-        EOF
-        
-        echo "Generated changelog:"
-        cat debian/changelog
-        
-        # Make scripts executable
-        chmod +x debian/rules
-        chmod +x debian/postinst
-        chmod +x debian/prerm
-        chmod +x debian/postrm
-        
-        echo "=== Pre-downloading binary (optional, debian/rules will download if missing) ==="
-        
-        # Try to pre-download the binary to speed up build
-        DOWNLOAD_URL="https://github.com/OpenListTeam/OpenList/releases/download/$TAG_NAME/openlist-linux-$ARCH.tar.gz"
-        echo "Pre-download URL: $DOWNLOAD_URL"
-        
-        if wget -O "openlist-linux-$ARCH.tar.gz" "$DOWNLOAD_URL" 2>/dev/null; then
-          echo "Pre-download successful"
-          ls -la openlist-linux-$ARCH.tar.gz
-        else
-          echo "Pre-download failed, debian/rules will handle download"
-        fi
-        
-        echo "=== Building DEB package ==="
-        
-        # Set environment variables for cross-compilation
-        export DEB_HOST_ARCH=$ARCH
-        export DEB_BUILD_OPTIONS="nocheck"
-        
-        # Set cross-compilation environment for ARM64
-        if [ "$ARCH" = "arm64" ]; then
-          export CC=aarch64-linux-gnu-gcc
-          export DEB_BUILD_PROFILES="cross"
-        fi
-        
-        echo "Building package with:"
-        echo "DEB_HOST_ARCH=$DEB_HOST_ARCH"
-        echo "DEB_BUILD_OPTIONS=$DEB_BUILD_OPTIONS"
-        echo "CC=$CC"
-        echo "DEB_BUILD_PROFILES=$DEB_BUILD_PROFILES"
-        echo "Package version: $CLEAN_VERSION-1"
-        
-        # Verify current directory before build
-        echo "Files in current directory before build:"
-        ls -la
-        
-        # Build the package
-        dpkg-buildpackage -us -uc -a$ARCH
+        # Perform build
+        bash build.sh -v "$VERSION" -a "$ARCH"
         
         echo "=== Build completed ==="
         echo "Generated files:"
@@ -294,8 +204,10 @@ jobs:
         cd apt-repo
         
         # Copy DEB files
-        cp ../openlist-$VERSION-amd64.deb/openlist_${VERSION}-1_amd64.deb .
-        cp ../openlist-$VERSION-arm64.deb/openlist_${VERSION}-1_arm64.deb .
+        for arch in amd64 i386 arm64 armel armhf ppc64el riscv64 s390x loong64
+        do
+          cp ../openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb .
+        done
         
         echo "DEB files for APT repository:"
         ls -la *.deb
@@ -306,7 +218,7 @@ jobs:
         APT::FTPArchive::Release::Label "OpenList APT Repository";
         APT::FTPArchive::Release::Suite "./";
         APT::FTPArchive::Release::Codename "openlist";
-        APT::FTPArchive::Release::Architectures "amd64 arm64";
+        APT::FTPArchive::Release::Architectures "amd64 i386 arm64 armel armhf ppc64el riscv64 s390x loong64";
         APT::FTPArchive::Release::Components "";
         APT::FTPArchive::Release::Description "OpenList APT Repository for direct GitHub Release access";
         EOF
@@ -578,7 +490,7 @@ jobs:
         - **Source**: OpenListTeam/OpenList $SOURCE_TAG
         - **Package Version**: $VERSION-1
         - **Build Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-        - **Architectures**: AMD64, ARM64
+        - **Architectures**: amd64, i386, arm64, armel, armhf, ppc64el, riscv64, s390x, loong64
         - **GPG Signed**: $([ -f apt-repo/Release.gpg ] && echo '✅ Yes' || echo '❌ No')
         - **Repository Format**: APT-compatible with GPG signature verification
 

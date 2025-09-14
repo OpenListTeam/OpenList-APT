@@ -8,6 +8,25 @@ export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version | cut -d- -f1)
 SOURCE_TAG := v$(DEB_VERSION)
 
+# Architecture map for dpkg 
+# "Arch in dpkg" -> "Arch in openlist"
+# See: https://wiki.debian.org/SupportedArchitectures and https://www.debian.org/ports/
+# Note: armel will be removed in Debian 14
+amd64_mapped   := amd64
+i386_mapped    := 386
+arm64_mapped   := arm64
+armel_mapped   := arm-5
+armhf_mapped   := arm-7
+ppc64el_mapped := ppc64le
+riscv64_mapped := riscv64
+s390x_mapped   := s390x
+loong64_mapped := loong64
+
+# Get arch value, return original value if not found
+get_mapped_arch = $(if $(value $(1)_mapped),$(value $(1)_mapped),$(1))
+
+OPENLIST_ARCH := $(call get_mapped_arch,$(DEB_HOST_ARCH))
+
 %:
 	dh $@
 
@@ -15,32 +34,33 @@ override_dh_auto_build:
 	@echo "=== Debian Rules: override_dh_auto_build ==="
 	@echo "Package version: $(DEB_VERSION)"
 	@echo "Source tag: $(SOURCE_TAG)"
-	@echo "Architecture: $(DEB_HOST_ARCH)"
+	@echo "Dpkg Architecture: $(DEB_HOST_ARCH)"
+	@echo "OpenList Architecture: $(OPENLIST_ARCH)"
 	@echo "Build phase - preparing for installation"
 
 override_dh_auto_install:
 	@echo "=== Debian Rules: override_dh_auto_install ==="
 	@echo "Looking for binary for architecture: $(DEB_HOST_ARCH)"
 	# First check if binary is pre-downloaded in debian/binaries/ (for PPA builds)
-	if [ -f "debian/binaries/openlist-linux-$(DEB_HOST_ARCH).tar.gz" ]; then \
+	if [ -f "debian/binaries/openlist-linux-$(OPENLIST_ARCH).tar.gz" ]; then \
 		echo "Found pre-downloaded binary in debian/binaries/"; \
-		cp "debian/binaries/openlist-linux-$(DEB_HOST_ARCH).tar.gz" "openlist-linux-$(DEB_HOST_ARCH).tar.gz"; \
-	elif [ ! -f "openlist-linux-$(DEB_HOST_ARCH).tar.gz" ]; then \
+		cp "debian/binaries/openlist-linux-$(OPENLIST_ARCH).tar.gz" "openlist-linux-$(OPENLIST_ARCH).tar.gz"; \
+	elif [ ! -f "openlist-linux-$(OPENLIST_ARCH).tar.gz" ]; then \
 		echo "Binary archive not found, downloading..."; \
-		echo "Download URL: https://github.com/OpenListTeam/OpenList/releases/download/$(SOURCE_TAG)/openlist-linux-$(DEB_HOST_ARCH).tar.gz"; \
-		wget -O "openlist-linux-$(DEB_HOST_ARCH).tar.gz" \
-			"https://github.com/OpenListTeam/OpenList/releases/download/$(SOURCE_TAG)/openlist-linux-$(DEB_HOST_ARCH).tar.gz" || \
+		echo "Download URL: https://github.com/OpenListTeam/OpenList/releases/download/$(SOURCE_TAG)/openlist-linux-$(OPENLIST_ARCH).tar.gz"; \
+		wget -O "openlist-linux-$(OPENLIST_ARCH).tar.gz" \
+			"https://github.com/OpenListTeam/OpenList/releases/download/$(SOURCE_TAG)/openlist-linux-$(OPENLIST_ARCH).tar.gz" || \
 		(echo "Failed to download binary archive"; exit 1); \
 	fi
 	mkdir -p temp_extract
-	if [ -f "openlist-linux-$(DEB_HOST_ARCH).tar.gz" ]; then \
-		echo "Found binary archive: openlist-linux-$(DEB_HOST_ARCH).tar.gz"; \
-		echo "Archive size: $$(ls -lh openlist-linux-$(DEB_HOST_ARCH).tar.gz | awk '{print $$5}')"; \
+	if [ -f "openlist-linux-$(OPENLIST_ARCH).tar.gz" ]; then \
+		echo "Found binary archive: openlist-linux-$(OPENLIST_ARCH).tar.gz"; \
+		echo "Archive size: $$(ls -lh openlist-linux-$(OPENLIST_ARCH).tar.gz | awk '{print $$5}')"; \
 		echo "Extracting to temporary directory"; \
-		tar -xzf "openlist-linux-$(DEB_HOST_ARCH).tar.gz" -C temp_extract; \
+		tar -xzf "openlist-linux-$(OPENLIST_ARCH).tar.gz" -C temp_extract; \
 		echo "Extraction completed"; \
 	else \
-		echo "Error: Binary archive openlist-linux-$(DEB_HOST_ARCH).tar.gz not found"; \
+		echo "Error: Binary archive openlist-linux-$(OPENLIST_ARCH).tar.gz not found"; \
 		exit 1; \
 	fi
 	@echo "Checking extracted contents:"
@@ -50,7 +70,7 @@ override_dh_auto_install:
 		echo "Contents of extraction directory:"; \
 		find temp_extract/ -type f -exec ls -la {} \; || echo "Directory is empty"; \
 		echo "Checking what was in the archive:"; \
-		tar -tzf "openlist-linux-$(DEB_HOST_ARCH).tar.gz" || echo "Cannot list archive contents"; \
+		tar -tzf "openlist-linux-$(OPENLIST_ARCH).tar.gz" || echo "Cannot list archive contents"; \
 		exit 1; \
 	fi
 	mkdir -p debian/openlist/var/lib/openlist
