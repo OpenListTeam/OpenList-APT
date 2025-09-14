@@ -235,9 +235,9 @@ echo "Package version: $CLEAN_VERSION-1"
 # Build the package
 echo "Starting dpkg-buildpackage..."
 if [ "$DEBUG" = "true" ]; then
-    dpkg-buildpackage -us -uc -a$ARCH
+    dpkg-buildpackage -b -us -uc -a$ARCH
 else
-    dpkg-buildpackage -us -uc -a$ARCH 2>&1 | tee build.log
+    dpkg-buildpackage -b -us -uc -a$ARCH 2>&1 | tee build.log
 fi
 
 # Cleanup
