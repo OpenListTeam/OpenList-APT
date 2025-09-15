@@ -464,6 +464,14 @@ jobs:
         SOURCE_TAG="${{ needs.check-version.outputs.tag_name }}"
         
         # Prepare files for upload
+        
+        # Add debs 
+        DEBS_TO_UPLOAD="openlist-$VERSION-amd64.deb/openlist_${VERSION}-1_amd64.deb"
+        for arch in i386 arm64 armel armhf ppc64el riscv64 s390x loong64
+        do
+            DEBS_TO_UPLOAD="$DEBS_TO_UPLOAD openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb"
+        done
+
         cd apt-repo
         FILES_TO_UPLOAD="Packages Release install-apt.sh"
         
@@ -475,15 +483,7 @@ jobs:
         # Add keyring file if it exists
         if [ -f "openlist-archive-keyring.gpg" ]; then
           FILES_TO_UPLOAD="$FILES_TO_UPLOAD openlist-archive-keyring.gpg"
-        fi
-
-        # Add debs 
-        DEBS_TO_UPLOAD="openlist-$VERSION-amd64.deb/openlist_${VERSION}-1_amd64.deb"
-        for arch in i386 arm64 armel armhf ppc64el riscv64 s390x loong64
-        do
-            DEBS_TO_UPLOAD="$DEBS_TO_UPLOAD openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb"
-        done
-        
+        fi        
         cd ..
         
         # Create release with proper changelog
