@@ -670,7 +670,7 @@ jobs:
 
         ---
         **🔒 Security Note**: This repository is GPG-signed for package integrity verification. The automatic installation script will set up GPG verification by default. For maximum security, always use the GPG-verified installation methods." \
-          "$DEBS_TO_UPLOAD" \
+          $DEBS_TO_UPLOAD \
           $(echo $FILES_TO_UPLOAD | sed 's|^|apt-repo/|g; s| | apt-repo/|g')
 
   upload-to-ppa:
