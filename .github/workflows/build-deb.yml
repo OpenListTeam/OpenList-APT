@@ -481,7 +481,7 @@ jobs:
         DEBS_TO_UPLOAD=""
         for arch in amd64 i386 arm64 armel armhf ppc64el riscv64 s390x loong64
         do
-            DEBS_TO_UPLOAD="DEBS_TO_UPLOAD openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb"
+            DEBS_TO_UPLOAD="$DEBS_TO_UPLOAD openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb"
         done
         
         cd ..
