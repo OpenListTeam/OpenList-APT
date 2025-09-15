@@ -476,6 +476,12 @@ jobs:
         if [ -f "openlist-archive-keyring.gpg" ]; then
           FILES_TO_UPLOAD="$FILES_TO_UPLOAD openlist-archive-keyring.gpg"
         fi
+
+        # Add debs 
+        for arch in amd64 i386 arm64 armel armhf ppc64el riscv64 s390x loong64
+        do
+            FILES_TO_UPLOAD="$FILES_TO_UPLOAD openlist-$VERSION-$arch.deb/openlist_${VERSION}-1_$arch.deb"
+        done
         
         cd ..
         
@@ -663,8 +669,6 @@ jobs:
 
         ---
         **🔒 Security Note**: This repository is GPG-signed for package integrity verification. The automatic installation script will set up GPG verification by default. For maximum security, always use the GPG-verified installation methods." \
-          openlist-$VERSION-amd64.deb/openlist_${VERSION}-1_amd64.deb \
-          openlist-$VERSION-arm64.deb/openlist_${VERSION}-1_arm64.deb \
           $(echo $FILES_TO_UPLOAD | sed 's|^|apt-repo/|g; s| | apt-repo/|g')
 
   upload-to-ppa:
