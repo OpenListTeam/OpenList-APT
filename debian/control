@@ -2,14 +2,14 @@ Source: openlist
 Section: utils
 Priority: optional
 Maintainer: OpenListTeam <openlistteam@gmail.com>
-Build-Depends: debhelper (>= 10), wget
+Build-Depends: debhelper (>= 10), wget, tar
 Standards-Version: 4.1.2
 Homepage: https://github.com/OpenListTeam/OpenList
 Vcs-Git: https://github.com/OpenListTeam/OpenList.git
 Vcs-Browser: https://github.com/OpenListTeam/OpenList
 
 Package: openlist
-Architecture: amd64 arm64
+Architecture: any
 Depends: ${misc:Depends}, systemd, adduser
 Description: OpenList - A modern file management and sharing platform
  OpenList is a powerful file management and sharing platform that provides

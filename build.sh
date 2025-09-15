@@ -4,9 +4,24 @@ set -e
 
 # Default values
 VERSION=""
-ARCH="amd64"
+DPKG_ARCH="amd64"
 USE_LATEST=true
 DEBUG=false
+# Architecture map for dpkg 
+# "Arch in dpkg" -> "Arch in openlist"
+# See: https://wiki.debian.org/SupportedArchitectures and https://www.debian.org/ports/
+# Note: armel will be removed in Debian 14
+declare -A ARCH_MAP=(
+    ["amd64"]="amd64"
+    ["i386"]="386"
+    ["arm64"]="arm64"
+    ["armel"]="arm-5"
+    ["armhf"]="arm-7"
+    ["ppc64el"]="ppc64le"
+    ["riscv64"]="riscv64"
+    ["s390x"]="s390x"
+    ["loong64"]="loong64"
+)
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -17,7 +32,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -a|--arch)
-            ARCH="$2"
+            DPKG_ARCH="$2"
             shift 2
             ;;
         -d|--debug)
@@ -28,7 +43,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo "Options:"
             echo "  -v, --version VERSION    Set package version (default: fetch latest from GitHub)"
-            echo "  -a, --arch ARCH         Set architecture (amd64 or arm64, default: amd64)"
+            echo "  -a, --arch ARCH         Set architecture (as supported in Debian, default: amd64)"
             echo "  -d, --debug             Enable debug output"
             echo "  -h, --help              Show this help message"
             exit 0
@@ -46,8 +61,10 @@ if [ "$DEBUG" = "true" ]; then
 fi
 
 # Validate architecture
-if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
-    echo "Error: Architecture must be either 'amd64' or 'arm64'"
+ARCH=${ARCH_MAP["$DPKG_ARCH"]}
+if [ -z "$ARCH" ]; then 
+    echo "Error: Invalid architecture: $DPKG_ARCH"
+    echo "Supported architectures: ${!ARCH_MAP[@]}"
     exit 1
 fi
 
@@ -123,12 +140,13 @@ fi
 echo "Building OpenList DEB package..."
 echo "Version: $CLEAN_VERSION"
 echo "Architecture: $ARCH"
+echo "Dpkg Architecture: $DPKG_ARCH"
 
 # Check for required tools
 echo "=== Checking for required tools ==="
 MISSING_TOOLS=()
 
-for tool in wget tar dpkg-buildpackage debhelper; do
+for tool in wget tar dpkg-buildpackage dh; do
     if ! command -v $tool &> /dev/null; then
         MISSING_TOOLS+=("$tool")
     fi
@@ -139,15 +157,6 @@ if [ ${#MISSING_TOOLS[@]} -ne 0 ]; then
     echo "Please install them:"
     echo "sudo apt-get install wget tar debhelper devscripts build-essential"
     exit 1
-fi
-
-# Install cross-compilation tools for ARM64 if needed and not already installed
-if [[ "$ARCH" == "arm64" ]]; then
-    if ! command -v aarch64-linux-gnu-gcc &> /dev/null; then
-        echo "Installing cross-compilation tools for ARM64..."
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-    fi
 fi
 
 # Download binary
@@ -191,7 +200,7 @@ cat > debian/changelog << EOF
 openlist ($CLEAN_VERSION-1) unstable; urgency=medium
 
   * DEB package built from OpenListTeam/OpenList $TAG_NAME
-  * Automated build for $ARCH architecture
+  * Automated build for $DPKG_ARCH architecture
   * Binary downloaded from official release
 
  -- OpenListTeam <openlistteam@gmail.com>  $(date -R)
@@ -207,12 +216,11 @@ chmod +x debian/prerm
 chmod +x debian/postrm
 
 # Set environment variables for cross-compilation
-export DEB_HOST_ARCH=$ARCH
+export DEB_HOST_ARCH=$DPKG_ARCH
 export DEB_BUILD_OPTIONS="nocheck"
 
-# Set cross-compilation environment for ARM64
-if [ "$ARCH" = "arm64" ]; then
-    export CC=aarch64-linux-gnu-gcc
+# Set cross-compilation environment for non-native arch
+if [ "$DPKG_ARCH" != "$(dpkg --print-architecture)" ]; then
     export DEB_BUILD_PROFILES="cross"
 fi
 
@@ -220,23 +228,22 @@ echo "=== Building package ==="
 echo "Building package with:"
 echo "DEB_HOST_ARCH=$DEB_HOST_ARCH"
 echo "DEB_BUILD_OPTIONS=$DEB_BUILD_OPTIONS"
-echo "CC=$CC"
 echo "DEB_BUILD_PROFILES=$DEB_BUILD_PROFILES"
 echo "Package version: $CLEAN_VERSION-1"
 
 # Build the package
 echo "Starting dpkg-buildpackage..."
 if [ "$DEBUG" = "true" ]; then
-    dpkg-buildpackage -us -uc -a$ARCH
+    dpkg-buildpackage -b -us -uc -a$DPKG_ARCH
 else
-    dpkg-buildpackage -us -uc -a$ARCH 2>&1 | tee build.log
+    dpkg-buildpackage -b -us -uc -a$DPKG_ARCH 2>&1 | tee build.log
 fi
 
 # Cleanup
 rm -f "openlist-linux-$ARCH.tar.gz"
 
 # Check for generated package
-EXPECTED_DEB="openlist_${CLEAN_VERSION}-1_${ARCH}.deb"
+EXPECTED_DEB="openlist_${CLEAN_VERSION}-1_${DPKG_ARCH}.deb"
 if [ -f "$EXPECTED_DEB" ]; then
     echo "=== Build completed successfully! ==="
     echo "Package file: $EXPECTED_DEB"
