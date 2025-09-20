@@ -849,6 +849,11 @@ jobs:
         if [ -d "openlist-${CLEAN_VERSION}/debian/binaries" ]; then
           echo "✅ Binaries found in source package:"
           ls -la openlist-${CLEAN_VERSION}/debian/binaries/
+          # Add them into debian/source/include-binaries
+          mkdir -p "openlist-${CLEAN_VERSION}/debian/source"
+          cd "openlist-${CLEAN_VERSION}" && \
+          find debian/binaries/ -type f -printf 'debian/binaries/%f\n' > debian/source/include-binaries && \
+          cd ..
         else
           echo "❌ No binaries found in source package - this should not happen"
           echo "Contents of source directory:"
