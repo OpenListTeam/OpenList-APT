@@ -852,7 +852,7 @@ jobs:
           # Add them into debian/source/include-binaries
           mkdir -p "openlist-${CLEAN_VERSION}/debian/source"
           cd "openlist-${CLEAN_VERSION}" && \
-          find debian/binaries/ -type f -printf 'debian/binaries/%f\n' > debian/source/include-binaries && \
+          find debian/binaries/ -type f -printf 'debian/binaries/%P\n' > debian/source/include-binaries && \
           cd ..
         else
           echo "❌ No binaries found in source package - this should not happen"
