@@ -853,6 +853,16 @@ jobs:
           mkdir -p "openlist-${CLEAN_VERSION}/debian/source" && \
           find "openlist-${CLEAN_VERSION}/debian/binaries/" -type f -printf 'debian/binaries/%P\n' > "openlist-${CLEAN_VERSION}/debian/source/include-binaries" || \
           echo "Warning: Failed to create include-binaries file"
+          
+          # Debug: Verify include-binaries file was created and show its content
+          if [ -f "openlist-${CLEAN_VERSION}/debian/source/include-binaries" ]; then
+            echo "✅ include-binaries file created successfully:"
+            echo "Content of include-binaries file:"
+            cat "openlist-${CLEAN_VERSION}/debian/source/include-binaries"
+          else
+            echo "❌ include-binaries file was not created!"
+            exit 1
+          fi
         else
           echo "❌ No binaries found in source package - this should not happen"
           echo "Contents of source directory:"
