@@ -791,12 +791,22 @@ jobs:
         # Go back to parent directory
         cd ..
         
-        # Create the orig.tar.gz from our minimal source (required for PPA)
-        echo "Creating orig.tar.gz from minimal source..."
-        tar -czf "openlist_${CLEAN_VERSION}.orig.tar.gz" "openlist-${CLEAN_VERSION}"
+        # Ensure consistent file timestamps for reproducible builds
+        echo "Setting consistent timestamps for reproducible builds..."
+        find "openlist-${CLEAN_VERSION}" -exec touch -t 202501010000.00 {} \;
         
-        echo "Created minimal source package:"
+        # Create the orig.tar.gz from our minimal source (required for PPA)
+        echo "Creating temporary orig.tar.gz from minimal source..."
+        # Use deterministic tar options for reproducible builds
+        tar --sort=name --mtime='2025-01-01 00:00:00' --owner=0 --group=0 --numeric-owner \
+            -czf "openlist_${CLEAN_VERSION}.orig.tar.gz" "openlist-${CLEAN_VERSION}"
+        
+        echo "Created temporary source package:"
         ls -la openlist_${CLEAN_VERSION}.orig.tar.gz
+        
+        # Generate checksum for verification
+        echo "Source package checksum:"
+        sha256sum "openlist_${CLEAN_VERSION}.orig.tar.gz"
         
     - name: Set up GPG
       env:
@@ -870,16 +880,24 @@ jobs:
         if [ -d "openlist-${CLEAN_VERSION}/debian/binaries" ]; then
           echo "✅ Binaries found in source package:"
           ls -la openlist-${CLEAN_VERSION}/debian/binaries/
+          
           # Create debian/source/include-binaries to list pre-downloaded binaries
-          mkdir -p "openlist-${CLEAN_VERSION}/debian/source" && \
-          find "openlist-${CLEAN_VERSION}/debian/binaries/" -type f -printf 'debian/binaries/%P\n' > "openlist-${CLEAN_VERSION}/debian/source/include-binaries" || \
-          echo "Warning: Failed to create include-binaries file"
+          # This is required for PPA offline builds as they cannot download from internet
+          echo "Creating debian/source/include-binaries for PPA offline build..."
+          mkdir -p "openlist-${CLEAN_VERSION}/debian/source"
+          
+          # Generate include-binaries file with proper paths
+          # Use a more reliable approach to ensure consistent file paths
+          cd "openlist-${CLEAN_VERSION}"
+          find debian/binaries/ -type f -name "*.tar.gz" | sort > debian/source/include-binaries
+          cd ..
           
           # Debug: Verify include-binaries file was created and show its content
           if [ -f "openlist-${CLEAN_VERSION}/debian/source/include-binaries" ]; then
             echo "✅ include-binaries file created successfully:"
             echo "Content of include-binaries file:"
             cat "openlist-${CLEAN_VERSION}/debian/source/include-binaries"
+            echo "File count: $(wc -l < "openlist-${CLEAN_VERSION}/debian/source/include-binaries")"
           else
             echo "❌ include-binaries file was not created!"
             exit 1
@@ -998,6 +1016,24 @@ jobs:
         
         echo "Using version suffix: $VERSION_SUFFIX"
         echo "Full package version will be: $CLEAN_VERSION-$VERSION_SUFFIX"
+        
+        # Rename orig.tar.gz to include the full version suffix (from within source directory)
+        FULL_VERSION_WITH_SUFFIX="${CLEAN_VERSION}-${VERSION_SUFFIX}"
+        echo "Renaming orig.tar.gz to match PPA version..."
+        
+        # Go to parent directory to rename the orig.tar.gz file
+        cd ..
+        mv "openlist_${CLEAN_VERSION}.orig.tar.gz" "openlist_${FULL_VERSION_WITH_SUFFIX}.orig.tar.gz"
+        
+        echo "Renamed to PPA-compatible filename:"
+        ls -la "openlist_${FULL_VERSION_WITH_SUFFIX}.orig.tar.gz"
+        
+        # Generate final checksum for verification
+        echo "Final source package checksum:"
+        sha256sum "openlist_${FULL_VERSION_WITH_SUFFIX}.orig.tar.gz"
+        
+        # Return to source directory
+        cd "openlist-${CLEAN_VERSION}"
         
         cat > debian/changelog << EOF
         openlist ($CLEAN_VERSION-$VERSION_SUFFIX) $UBUNTU_RELEASE; urgency=medium
