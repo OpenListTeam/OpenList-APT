@@ -6,10 +6,15 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
+      ppa_only:
+        description: 'Only upload to PPA (skip build and GitHub release)'
+        required: false
+        default: false
+        type: boolean
       force_build:
         description: 'Force build even if no new version'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       ppa_build_number:
         description: 'Custom PPA build number (e.g., 2 for 4.0.8-2ubuntu1~22.04.1)'
@@ -85,8 +90,16 @@ jobs:
       run: |
         VERSION="${{ steps.get-version.outputs.version }}"
         FORCE_BUILD="${{ github.event.inputs.force_build }}"
+        PPA_ONLY="${{ github.event.inputs.ppa_only }}"
         
         echo "Checking if build is needed for version: $VERSION"
+        
+        # Skip build check if PPA only mode
+        if [ "$PPA_ONLY" = "true" ]; then
+          echo "PPA only mode - skipping build check"
+          echo "should_build=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
         
         # Check if this version was already built
         if [ "$FORCE_BUILD" = "true" ]; then
@@ -108,7 +121,7 @@ jobs:
   build-deb:
     name: Build OpenList Packages
     needs: check-version
-    if: needs.check-version.outputs.should_build == 'true'
+    if: github.event.inputs.ppa_only != 'true' && needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -159,7 +172,7 @@ jobs:
   create-release:
     name: Create Github Release
     needs: [check-version, build-deb]
-    if: needs.check-version.outputs.should_build == 'true'
+    if: github.event.inputs.ppa_only != 'true' && needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -677,7 +690,13 @@ jobs:
     name: Upload to PPA Repository
     needs: [check-version, build-deb]
     runs-on: ubuntu-latest
-    if: needs.check-version.outputs.should_build == 'true' && vars.ENABLE_PPA_UPLOAD == 'true'
+    if: |
+      always() && 
+      (
+        (github.event.inputs.ppa_only != 'true' && needs.check-version.outputs.should_build == 'true') ||
+        (github.event.inputs.ppa_only == 'true' && needs.check-version.result == 'success')
+      ) && 
+      vars.ENABLE_PPA_UPLOAD == 'true'
     strategy:
       matrix:
         ubuntu_release: [focal, jammy, noble]  # Ubuntu 20.04, 22.04, 24.04
@@ -693,6 +712,7 @@ jobs:
         
     - name: Prepare minimal source package for PPA
       run: |
+        # Use check-version outputs for both normal and PPA-only modes
         VERSION="${{ needs.check-version.outputs.version }}"
         TAG_NAME="${{ needs.check-version.outputs.tag_name }}"
         
@@ -824,6 +844,7 @@ jobs:
         GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
+        # Use check-version outputs for both normal and PPA-only modes
         VERSION="${{ needs.check-version.outputs.version }}"
         TAG_NAME="${{ needs.check-version.outputs.tag_name }}"
         
