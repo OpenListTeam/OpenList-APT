@@ -3,63 +3,23 @@ set -e
 
 case "$1" in
     purge)
-        # Stop and disable service if still running
-        if systemctl is-active --quiet openlist.service 2>/dev/null; then
-            systemctl stop openlist.service 2>/dev/null || true
-        fi
-        if systemctl is-enabled --quiet openlist.service 2>/dev/null; then
-            systemctl disable openlist.service 2>/dev/null || true
-        fi
-        
-        # Reload systemd to remove the service
-        systemctl daemon-reload 2>/dev/null || true
-        
         # Remove user and group on purge
         if getent passwd openlist >/dev/null; then
             deluser openlist || true
         fi
-        
+
         if getent group openlist >/dev/null; then
             delgroup openlist || true
         fi
-        
+
         # Remove data directory and all contents on purge
         if [ -d "/var/lib/openlist" ]; then
             echo "Removing /var/lib/openlist and all contents..."
             rm -rf /var/lib/openlist || true
         fi
-        
-        # Remove any leftover systemd service files
-        if [ -f "/usr/lib/systemd/system/openlist.service" ]; then
-            rm -f /usr/lib/systemd/system/openlist.service || true
-        fi
-        if [ -f "/lib/systemd/system/openlist.service" ]; then
-            rm -f /lib/systemd/system/openlist.service || true
-        fi
-        if [ -f "/etc/systemd/system/openlist.service" ]; then
-            rm -f /etc/systemd/system/openlist.service || true
-        fi
-        
-        # Remove any systemd symlinks
-        find /etc/systemd/system -name "*openlist*" -type l -delete 2>/dev/null || true
-        
-        # Final systemd reload
-        systemctl daemon-reload 2>/dev/null || true
         ;;
-    
-    remove)
-        # Stop service on remove but keep user and data
-        if systemctl is-active --quiet openlist.service 2>/dev/null; then
-            systemctl stop openlist.service 2>/dev/null || true
-        fi
-        if systemctl is-enabled --quiet openlist.service 2>/dev/null; then
-            systemctl disable openlist.service 2>/dev/null || true
-        fi
-        systemctl daemon-reload 2>/dev/null || true
-        ;;
-        
-    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-        # Do nothing for these cases
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
         ;;
         
     *)

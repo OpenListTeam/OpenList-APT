@@ -1,2 +1,2 @@
-# Files are installed manually in debian/rules
-# This file is kept empty to avoid dh_install conflicts
+# Binary and wrapper are staged manually in debian/rules.
+# The systemd unit is installed by dh_installsystemd from debian/openlist.service.
