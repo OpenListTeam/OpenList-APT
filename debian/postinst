@@ -29,15 +29,6 @@ if [ -f "/var/lib/openlist/openlist" ]; then
     chmod 755 /var/lib/openlist/openlist
 fi
 
-# Enable and start the service
-systemctl daemon-reload
-systemctl enable openlist.service
-
-# Start the service if it's a fresh install
-if [ "$1" = "configure" ] && [ -z "$2" ]; then
-    systemctl start openlist.service
-fi
-
 #DEBHELPER#
 
 exit 0

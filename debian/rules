@@ -75,10 +75,8 @@ override_dh_auto_install:
 	fi
 	mkdir -p debian/openlist/var/lib/openlist
 	mkdir -p debian/openlist/usr/bin
-	mkdir -p debian/openlist/usr/lib/systemd/system
 	cp temp_extract/openlist debian/openlist/var/lib/openlist/
 	chmod +x debian/openlist/var/lib/openlist/openlist
-	cp debian/openlist.service debian/openlist/usr/lib/systemd/system/
 	echo '#!/bin/bash' > debian/openlist/usr/bin/openlist
 	echo '# OpenList wrapper script' >> debian/openlist/usr/bin/openlist
 	echo '# Automatically adds --force-bin-dir to all commands' >> debian/openlist/usr/bin/openlist
@@ -108,6 +106,9 @@ override_dh_auto_install:
 
 override_dh_install:
 	@echo "Skipping dh_install - files already installed manually"
+
+override_dh_installsystemd:
+	dh_installsystemd $(CURDIR)/debian/openlist.service --restart-after-upgrade
 
 override_dh_usrlocal:
 	@echo "Skipping dh_usrlocal - not using /usr/local"
