@@ -203,7 +203,7 @@ openlist ($CLEAN_VERSION-1) unstable; urgency=medium
   * Automated build for $DPKG_ARCH architecture
   * Binary downloaded from official release
 
- -- OpenListTeam <openlistteam@gmail.com>  $(date -R)
+ -- The OpenList Projects Contributors <noreply@oplist.org>  $(date -R)
 EOF
 
 echo "Generated changelog:"
